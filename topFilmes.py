@@ -12,7 +12,13 @@ def trata_valor(valor):
         valor = re.sub('[^0-9]', '', valor)
     return valor
 
-def valida_site(url):
+def salvar(listFilmes):
+    arquivo_txt = open('arq_filmes.txt', 'w')
+    for linha in listFilmes:
+        arquivo_txt.write(linha + '\n')
+    arquivo_txt.close()
+
+def valida_site(url, listFilmes, contador):
     ssl._create_default_https_context = ssl._create_unverified_context
     try:
         html = urlopen(url)
@@ -21,9 +27,9 @@ def valida_site(url):
     except URLError as e:
         return None
     try:
-
         bs = BeautifulSoup(html.read(), 'html.parser')
         lista_filmes = bs.find_all('div', {'class': 'lister-item mode-advanced'})
+
         for filme in lista_filmes:
             try:
                 ano = trata_valor(filme.find_all('span', {'class': 'lister-item-year text-muted unbold'})[0].get_text())
@@ -38,14 +44,25 @@ def valida_site(url):
                 metascore = trata_valor(filme.find_all('div', {'class': 'inline-block ratings-metascore'})[0].get_text())
             except:
                 metascore = 0
-            titulo = filme.select('div#main > div > div > div > div > div > h3 > a')[0].text
-            print(ano, num_ibdb, metascore, titulo)
+            try:
+                tmp = filme.find('p', {'class': 'sort-num_votes-visible'})
+                votos = trata_valor(tmp.find_all('span')[1].get_text())
+            except:
+                votos = 0
 
+            titulo = filme.select('div#main > div > div > div > div > div > h3 > a')[0].text
+            var = ('{:<5}{:<10}{:<10}{:<100}{:<15}{:<10}').format(str(contador), str(num_ibdb), str(metascore), str(titulo), str(votos), str(ano)[:4])
+            listFilmes.append(var)
+            contador += 1
+        return contador
     except:
         return None
 
-variavel = 1
-while variavel < 2010:
-    url = ("https://www.imdb.com/search/title/?release_date=2020-01-01,2022-12-31&start={}&ref_=adv_nxt").format(str(variavel))
-    text_salvar = valida_site(url)
-    variavel += 50
+listFilmes = ['{:<5}{:<10}{:<10}{:<100}{:<15}{:<10}'.format('#', 'imbd', 'metascore', 'filme', 'votos', 'ano')]
+contador = 0
+for pagina in range(1,2001,50):
+    url = ("https://www.imdb.com/search/title/?release_date=2020-01-01,2022-12-31&sort=num_votes,desc&start={}&ref_=adv_nxt").format(str(pagina))
+    contador = valida_site(url, listFilmes, contador)
+
+
+salvar(listFilmes)
